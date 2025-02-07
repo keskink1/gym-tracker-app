@@ -16,11 +16,10 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 import workoutService from 'src/@core/services/workout.service'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { Workout } from 'src/types/workout'
+import { Workout, WorkoutExercise, ExerciseType, ExerciseSession } from 'src/types/workout'
 import Icon from 'src/@core/components/icon'
 import WorkoutForm, { WorkoutFormRef } from 'src/components/workout/WorkoutForm'
 import exerciseService from 'src/@core/services/exercise.service'
-import { ExerciseType } from 'src/types/workout'
 
 const WorkoutDetails = ({
   workout,
@@ -34,6 +33,12 @@ const WorkoutDetails = ({
   const [expanded, setExpanded] = useState<string | false>(false)
   const [weights, setWeights] = useState<Record<string, (number | '')[]>>({})
   const [availableExercises, setAvailableExercises] = useState<ExerciseType[]>([])
+  const [activeExercise, setActiveExercise] = useState<string | null>(null)
+  const [isExercisePaused, setIsExercisePaused] = useState(false)
+  const [exerciseTime, setExerciseTime] = useState(0)
+  const [restTime, setRestTime] = useState(0)
+  const exerciseTimerRef = useRef<NodeJS.Timeout>()
+  const restTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const initialWeights: Record<string, (number | '')[]> = {}
@@ -56,6 +61,14 @@ const WorkoutDetails = ({
     fetchExercises()
   }, [])
 
+  // Timer'ları temizle
+  useEffect(() => {
+    return () => {
+      if (exerciseTimerRef.current) clearInterval(exerciseTimerRef.current)
+      if (restTimerRef.current) clearInterval(restTimerRef.current)
+    }
+  }, [])
+
   const handleWeightChange = (exerciseId: string | { _id: string }, setIndex: number, value: number | '') => {
     const currentId = typeof exerciseId === 'object' ? exerciseId._id : exerciseId
     setWeights(prev => ({
@@ -69,8 +82,103 @@ const WorkoutDetails = ({
   }
 
   const handleStartExercise = (exerciseId: string) => {
-    // TODO: Burada egzersizi başlatma işlemleri yapılacak
-    console.log('Starting exercise:', exerciseId)
+    setActiveExercise(exerciseId)
+    setExerciseTime(0)
+    exerciseTimerRef.current = setInterval(() => {
+      setExerciseTime(prev => prev + 1)
+    }, 1000)
+  }
+
+  const handleTimeout = () => {
+    setIsExercisePaused(true)
+    clearInterval(exerciseTimerRef.current)
+    setRestTime(0)
+    restTimerRef.current = setInterval(() => {
+      setRestTime(prev => prev + 1)
+    }, 1000)
+  }
+
+  const handleContinue = () => {
+    setIsExercisePaused(false)
+    clearInterval(restTimerRef.current)
+    setRestTime(0)
+    exerciseTimerRef.current = setInterval(() => {
+      setExerciseTime(prev => prev + 1)
+    }, 1000)
+  }
+
+  const handleFinishExercise = async (exercise: WorkoutExercise) => {
+    try {
+      const currentExerciseId = typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
+
+      const updatedExercises = workout.exercises.map(ex => {
+        const exId = typeof ex.exerciseId === 'object' ? ex.exerciseId._id : ex.exerciseId
+
+        if (exId === currentExerciseId) {
+          // Önceki sessions'ları _id olmadan yeni array'e kopyala
+          const previousSessions = (ex.sessions || []).map(session => ({
+            exerciseTime: session.exerciseTime,
+            restTime: session.restTime,
+            completedAt: session.completedAt
+          }))
+
+          return {
+            exerciseId: exId,
+            sets: ex.sets,
+            reps: ex.reps,
+            weight: ex.weight,
+            sessions: [
+              ...previousSessions,
+              {
+                exerciseTime,
+                restTime,
+                completedAt: new Date().toISOString()
+              }
+            ]
+          }
+        }
+        return {
+          exerciseId: exId,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight: ex.weight,
+          sessions: ex.sessions?.map(session => ({
+            exerciseTime: session.exerciseTime,
+            restTime: session.restTime,
+            completedAt: session.completedAt
+          }))
+        }
+      })
+
+      const response = await workoutService.updateWorkout(workout._id, {
+        name: workout.name,
+        exercises: updatedExercises
+      })
+
+      if (response.success) {
+        setWorkout({
+          ...workout,
+          exercises: updatedExercises
+        })
+        toast.success('Exercise session saved')
+      }
+    } catch (error) {
+      console.error('Error saving exercise session:', error)
+      toast.error('Failed to save exercise session')
+    } finally {
+      setActiveExercise(null)
+      setIsExercisePaused(false)
+      clearInterval(exerciseTimerRef.current)
+      clearInterval(restTimerRef.current)
+      setExerciseTime(0)
+      setRestTime(0)
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const handleSaveWeights = async (exerciseId: string) => {
@@ -120,7 +228,7 @@ const WorkoutDetails = ({
       <Box sx={{ mb: 4 }}>
         <Typography variant='h4'>{workout.name}</Typography>
         <Typography variant='body2' color='text.secondary'>
-          {new Date(workout.createdAt).toLocaleDateString()}
+          Created: {new Date(workout.createdAt).toLocaleString()}
         </Typography>
       </Box>
 
@@ -219,45 +327,106 @@ const WorkoutDetails = ({
                   </Box>
                 </Box>
 
-                {/* Start Exercise ve Save Weights butonları */}
-                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                  {!isEditing && ( // Edit modunda değilse butonları göster
+                {/* Timer ve butonlar */}
+                <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  {activeExercise ===
+                    (typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId) && (
                     <>
-                      <Button
-                        variant='contained'
-                        color='primary'
-                        size='small'
-                        startIcon={<Icon icon='mdi:play' />}
-                        onClick={() =>
-                          handleStartExercise(
-                            typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-                          )
-                        }
-                      >
-                        Start Exercise
-                      </Button>
-                      {!exercise.weight && ( // Ağırlık kayıtlı değilse Save Weights butonunu göster
+                      <Typography variant='h6'>
+                        Exercise Time: {formatTime(exerciseTime)}
+                        {isExercisePaused && restTime > 0 && ` (Rest: ${formatTime(restTime)})`}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
                         <Button
-                          variant='outlined'
-                          color='primary'
+                          variant='contained'
+                          color={isExercisePaused ? 'success' : 'warning'}
                           size='small'
-                          startIcon={<Icon icon='mdi:content-save' />}
-                          onClick={() =>
-                            handleSaveWeights(
-                              typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-                            )
-                          }
+                          onClick={isExercisePaused ? handleContinue : handleTimeout}
                         >
-                          Save Weights
+                          {isExercisePaused ? 'Continue' : 'Timeout'}
                         </Button>
-                      )}
+                        <Button
+                          variant='contained'
+                          color='error'
+                          size='small'
+                          onClick={() => handleFinishExercise(exercise)}
+                        >
+                          Finish Exercise
+                        </Button>
+                      </Box>
                     </>
                   )}
+                  {!activeExercise && !isEditing && (
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      size='small'
+                      startIcon={<Icon icon='mdi:play' />}
+                      onClick={() =>
+                        handleStartExercise(
+                          typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
+                        )
+                      }
+                    >
+                      Start Exercise
+                    </Button>
+                  )}
+                  {/* Save Weights butonu */}
+                  {!isEditing && !exercise.weight && !activeExercise && (
+                    <Button
+                      variant='outlined'
+                      color='primary'
+                      size='small'
+                      startIcon={<Icon icon='mdi:content-save' />}
+                      onClick={() =>
+                        handleSaveWeights(
+                          typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
+                        )
+                      }
+                    >
+                      Save Weights
+                    </Button>
+                  )}
                 </Box>
+
+                {/* Egzersiz geçmişini göster */}
+                <ExerciseHistory sessions={exercise.sessions} formatTime={formatTime} />
               </CardContent>
             </Card>
           </AccordionDetails>
         </Accordion>
+      ))}
+    </Box>
+  )
+}
+
+// Egzersiz geçmişini göstermek için yeni bir component
+const ExerciseHistory = ({
+  sessions,
+  formatTime
+}: {
+  sessions?: ExerciseSession[]
+  formatTime: (seconds: number) => string
+}) => {
+  if (!sessions?.length) return null
+
+  return (
+    <Box sx={{ mt: 3 }}>
+      <Typography variant='subtitle1' gutterBottom>
+        Exercise History:
+      </Typography>
+      {sessions.map((session, idx) => (
+        <Card key={idx} variant='outlined' sx={{ mb: 1, p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant='body2'>
+              Exercise Time: {formatTime(session.exerciseTime)}
+              {session.restTime > 0 && ` (Rest: ${formatTime(session.restTime)})`}
+            </Typography>
+            <Typography variant='caption' color='text.secondary'>
+              {new Date(session.completedAt).toLocaleDateString()} {new Date(session.completedAt).toLocaleTimeString()}
+            </Typography>
+          </Box>
+        </Card>
       ))}
     </Box>
   )

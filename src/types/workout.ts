@@ -6,9 +6,10 @@ export interface ExerciseType {
   type?: string
 }
 
-interface SetDetails {
-  reps: number
-  weight: number
+export interface ExerciseSession {
+  exerciseTime: number // Toplam egzersiz süresi (saniye)
+  restTime: number // Toplam dinlenme süresi (saniye)
+  completedAt: string // Tamamlanma tarihi
 }
 
 // Workout içindeki egzersiz instance'ı
@@ -17,8 +18,7 @@ export interface WorkoutExercise {
   sets: number
   reps: number
   weight?: number
-  setWeights?: number[]
-  setDetails?: SetDetails[] // Her set için detaylar
+  sessions?: ExerciseSession[] // Egzersiz oturumları
 }
 
 // Workout'un kendisi
