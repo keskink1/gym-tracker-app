@@ -12,9 +12,12 @@ const CreateWorkoutPage = () => {
   const router = useRouter()
   const workoutFormRef = useRef<WorkoutFormRef>(null)
 
-  const handleSubmit = async (workoutData: Omit<Workout, '_id'>) => {
+  const handleSubmit = async (workoutData: Omit<Workout, '_id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const response = await workoutService.createWorkout(workoutData)
+      const response = await workoutService.createWorkout({
+        name: workoutData.name,
+        exercises: workoutData.exercises
+      })
       if (response.success) {
         toast.success('Workout created successfully')
         if (workoutFormRef.current) {

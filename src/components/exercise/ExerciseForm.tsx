@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Box, Button, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
-import { Exercise } from 'src/types/workout'
+import { ExerciseType } from 'src/types/workout'
 import { toast } from 'react-hot-toast'
 
 const exerciseTypes = [
@@ -15,8 +15,8 @@ const exerciseTypes = [
 ]
 
 interface ExerciseFormProps {
-  onSubmit: (exercise: Omit<Exercise, '_id'>) => void
-  initialData?: Exercise
+  onSubmit: (exercise: Omit<ExerciseType, '_id'>) => void
+  initialData?: ExerciseType
 }
 
 const ExerciseForm = ({ onSubmit, initialData }: ExerciseFormProps) => {

@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from 'react'
 import { Box, Typography, CircularProgress, Button } from '@mui/material'
 import Icon from 'src/@core/components/icon'
-import { Exercise, Workout } from 'src/types/workout'
+import { Workout, ExerciseType } from 'src/types/workout'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
 import workoutService from 'src/@core/services/workout.service'
 import exerciseService from 'src/@core/services/exercise.service'
@@ -12,13 +12,13 @@ import WorkoutCard from 'src/components/workout/WorkoutCard'
 const WorkoutsPage = () => {
   const router = useRouter()
   const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [exercises, setExercises] = useState<Record<string, Exercise>>({})
+  const [exercises, setExercises] = useState<Record<string, ExerciseType>>({})
   const [loading, setLoading] = useState(true)
 
   const fetchExercises = async () => {
     try {
       const exercises = await exerciseService.getAllExercises()
-      const exerciseMap: Record<string, Exercise> = {}
+      const exerciseMap: Record<string, ExerciseType> = {}
       exercises.forEach(exercise => {
         exerciseMap[exercise._id] = exercise
       })
@@ -64,7 +64,7 @@ const WorkoutsPage = () => {
   }
 
   const handleEdit = (workout: Workout) => {
-    router.push(`/workouts/${workout._id}`)
+    router.push(`/workouts/${workout._id}?edit=true`)
   }
 
   if (loading) {

@@ -5,20 +5,20 @@ import {
   TextField,
   Grid,
   IconButton,
-  Card,
-  CardContent,
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Card,
+  CardContent
 } from '@mui/material'
 import Icon from 'src/@core/components/icon'
-import { Exercise, Workout, WorkoutExercise } from 'src/types/workout'
+import { Workout, WorkoutExercise, ExerciseType } from 'src/types/workout'
 import toast from 'react-hot-toast'
 import exerciseService from 'src/@core/services/exercise.service'
 
 interface WorkoutFormProps {
-  onSubmit: (workout: Omit<Workout, '_id'>) => void
+  onSubmit: (workout: Omit<Workout, '_id' | 'createdAt' | 'updatedAt'>) => void
   initialData?: Workout
 }
 
@@ -37,7 +37,7 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
     }
     return []
   })
-  const [availableExercises, setAvailableExercises] = useState<Exercise[]>([])
+  const [availableExercises, setAvailableExercises] = useState<ExerciseType[]>([])
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -138,10 +138,10 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
         <Card key={index} sx={{ mb: 4 }}>
           <CardContent>
             <Grid container spacing={2} alignItems='center'>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={3}>
                 {renderSelect(exercise, index)}
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={2}>
                 <TextField
                   fullWidth
                   type='number'
@@ -151,13 +151,10 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
                     const value = Math.max(0, parseInt(e.target.value) || 0)
                     updateExercise(index, 'sets', value)
                   }}
-                  onKeyDown={e => {
-                    if (e.key === '-') e.preventDefault()
-                  }}
                   inputProps={{ min: 0 }}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={2}>
                 <TextField
                   fullWidth
                   type='number'
@@ -167,8 +164,18 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
                     const value = Math.max(0, parseInt(e.target.value) || 0)
                     updateExercise(index, 'reps', value)
                   }}
-                  onKeyDown={e => {
-                    if (e.key === '-') e.preventDefault()
+                  inputProps={{ min: 0 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  fullWidth
+                  type='number'
+                  label='Weight (kg)'
+                  value={exercise.weight || ''}
+                  onChange={e => {
+                    const value = Math.max(0, parseInt(e.target.value) || 0)
+                    updateExercise(index, 'weight', value || undefined)
                   }}
                   inputProps={{ min: 0 }}
                 />

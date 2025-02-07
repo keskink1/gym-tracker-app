@@ -1,18 +1,14 @@
 import { axiosClient } from 'src/configs/axios-client'
 import { BaseSuccessResponse } from 'src/types/auth'
-import { Exercise } from 'src/types/workout'
+import { ExerciseType } from 'src/types/workout'
 
 const exerciseService = {
-  getAllExercises: async (): Promise<Exercise[]> => {
-    try {
-      const { data } = await axiosClient.get('/exercises')
-      return data
-    } catch (error) {
-      return []
-    }
+  getAllExercises: async (): Promise<ExerciseType[]> => {
+    const { data } = await axiosClient.get('/exercises')
+    return data
   },
 
-  createExercise: async (request: Omit<Exercise, '_id'>): Promise<BaseSuccessResponse<Exercise>> => {
+  createExercise: async (request: Omit<ExerciseType, '_id'>): Promise<BaseSuccessResponse<ExerciseType>> => {
     const { data } = await axiosClient.post('/exercises', request)
     return {
       success: true,

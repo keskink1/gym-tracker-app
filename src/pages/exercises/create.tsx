@@ -4,14 +4,14 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 import exerciseService from 'src/@core/services/exercise.service'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { Exercise } from 'src/types/workout'
+import { ExerciseType } from 'src/types/workout'
 import { Icon } from '@iconify/react'
 import ExerciseForm from 'src/components/exercise/ExerciseForm'
 
 const CreateExercisePage = () => {
   const router = useRouter()
 
-  const handleSubmit = async (exerciseData: Omit<Exercise, '_id'>) => {
+  const handleSubmit = async (exerciseData: Omit<ExerciseType, '_id'>) => {
     try {
       const response = await exerciseService.createExercise(exerciseData)
       if (response.success) {
