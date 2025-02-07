@@ -9,8 +9,7 @@ import {
   AccordionDetails,
   Card,
   CardContent,
-  Chip,
-  TextField
+  Chip
 } from '@mui/material'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
 import workoutService from 'src/@core/services/workout.service'
@@ -31,7 +30,6 @@ const WorkoutDetails = ({
   isEditing: boolean
 }) => {
   const [expanded, setExpanded] = useState<string | false>(false)
-  const [weights, setWeights] = useState<Record<string, (number | '')[]>>({})
   const [availableExercises, setAvailableExercises] = useState<ExerciseType[]>([])
   const [activeExercise, setActiveExercise] = useState<string | null>(null)
   const [isExercisePaused, setIsExercisePaused] = useState(false)
@@ -39,15 +37,6 @@ const WorkoutDetails = ({
   const [restTime, setRestTime] = useState(0)
   const exerciseTimerRef = useRef<NodeJS.Timeout>()
   const restTimerRef = useRef<NodeJS.Timeout>()
-
-  useEffect(() => {
-    const initialWeights: Record<string, (number | '')[]> = {}
-    workout.exercises.forEach(exercise => {
-      const currentId = typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-      initialWeights[currentId] = Array(exercise.sets).fill(exercise.weight || '')
-    })
-    setWeights(initialWeights)
-  }, [workout])
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -68,14 +57,6 @@ const WorkoutDetails = ({
       if (restTimerRef.current) clearInterval(restTimerRef.current)
     }
   }, [])
-
-  const handleWeightChange = (exerciseId: string | { _id: string }, setIndex: number, value: number | '') => {
-    const currentId = typeof exerciseId === 'object' ? exerciseId._id : exerciseId
-    setWeights(prev => ({
-      ...prev,
-      [currentId]: prev[currentId].map((w, i) => (i === setIndex ? value : w))
-    }))
-  }
 
   const handleChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpanded(isExpanded ? panel : false)
@@ -181,47 +162,6 @@ const WorkoutDetails = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleSaveWeights = async (exerciseId: string) => {
-    try {
-      const updatedExercises = workout.exercises.map(ex => {
-        const currentExerciseId = typeof ex.exerciseId === 'object' ? (ex.exerciseId as any)._id : ex.exerciseId
-
-        if (currentExerciseId === exerciseId) {
-          const validWeight = weights[exerciseId]?.[0]
-          return {
-            exerciseId: currentExerciseId,
-            sets: ex.sets,
-            reps: ex.reps,
-            weight: typeof validWeight === 'number' ? validWeight : undefined
-          }
-        }
-
-        return {
-          exerciseId: currentExerciseId,
-          sets: ex.sets,
-          reps: ex.reps,
-          weight: ex.weight
-        }
-      })
-
-      const response = await workoutService.updateWorkout(workout._id, {
-        name: workout.name,
-        exercises: updatedExercises
-      })
-
-      if (response.success) {
-        toast.success('Weights saved successfully')
-        const updatedWorkout = await workoutService.getWorkout(workout._id)
-        if (updatedWorkout.success) {
-          setWorkout(updatedWorkout.data)
-        }
-      }
-    } catch (error) {
-      console.error('Error updating workout:', error)
-      toast.error('Failed to save weights')
-    }
-  }
-
   return (
     <Box>
       {/* Workout Başlığı */}
@@ -285,41 +225,9 @@ const WorkoutDetails = ({
 
                           {/* Weight gösterimi */}
                           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {exercise.weight ? (
-                              <Typography variant='body2' color='text.secondary'>
-                                Weight: {exercise.weight} kg
-                              </Typography>
-                            ) : (
-                              <TextField
-                                fullWidth
-                                type='number'
-                                size='small'
-                                label='Weight (kg)'
-                                value={
-                                  weights[
-                                    typeof exercise.exerciseId === 'object'
-                                      ? exercise.exerciseId._id
-                                      : exercise.exerciseId
-                                  ]?.[setIndex] === ''
-                                    ? ''
-                                    : weights[
-                                        typeof exercise.exerciseId === 'object'
-                                          ? exercise.exerciseId._id
-                                          : exercise.exerciseId
-                                      ]?.[setIndex]
-                                }
-                                onChange={e => {
-                                  const value = e.target.value === '' ? '' : Math.max(0, Number(e.target.value))
-                                  const currentId =
-                                    typeof exercise.exerciseId === 'object'
-                                      ? exercise.exerciseId._id
-                                      : exercise.exerciseId
-                                  handleWeightChange(currentId, setIndex, value)
-                                }}
-                                inputProps={{ min: 0 }}
-                                sx={{ mt: 1 }}
-                              />
-                            )}
+                            <Typography variant='body2' color='text.secondary'>
+                              {exercise.weight ? `Weight: ${exercise.weight} kg` : 'No weight set'}
+                            </Typography>
                           </Box>
                         </CardContent>
                       </Card>
@@ -369,22 +277,6 @@ const WorkoutDetails = ({
                       }
                     >
                       Start Exercise
-                    </Button>
-                  )}
-                  {/* Save Weights butonu */}
-                  {!isEditing && !exercise.weight && !activeExercise && (
-                    <Button
-                      variant='outlined'
-                      color='primary'
-                      size='small'
-                      startIcon={<Icon icon='mdi:content-save' />}
-                      onClick={() =>
-                        handleSaveWeights(
-                          typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-                        )
-                      }
-                    >
-                      Save Weights
                     </Button>
                   )}
                 </Box>
