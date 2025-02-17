@@ -11,7 +11,11 @@ import {
   MenuItem,
   Card,
   CardContent,
-  Typography
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import Icon from 'src/@core/components/icon'
 import { Workout, WorkoutExercise, ExerciseType } from 'src/types/workout'
@@ -28,7 +32,7 @@ export interface WorkoutFormRef {
 }
 
 const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, initialData }, ref) => {
-  const [workoutName, setWorkoutName] = useState(initialData?.name || '')
+  const [name, setName] = useState(initialData?.name || '')
   const [exercises, setExercises] = useState<WorkoutExercise[]>(() => {
     if (initialData?.exercises) {
       return initialData.exercises.map(e => ({
@@ -39,6 +43,8 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
     return []
   })
   const [availableExercises, setAvailableExercises] = useState<ExerciseType[]>([])
+  const [deleteExerciseConfirmOpen, setDeleteExerciseConfirmOpen] = useState(false)
+  const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -58,7 +64,7 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
 
   useImperativeHandle(ref, () => ({
     resetForm: () => {
-      setWorkoutName('')
+      setName('')
       setExercises([])
     }
   }))
@@ -92,17 +98,30 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
     })
   }
 
-  const removeExercise = (index: number) => {
-    setExercises(exercises.filter((_, i) => i !== index))
+  const handleRemoveExercise = (index: number) => {
+    setExerciseToDelete(index)
+    setDeleteExerciseConfirmOpen(true)
+  }
+
+  const confirmDeleteExercise = () => {
+    if (exerciseToDelete !== null) {
+      const newExercises = [...exercises]
+      newExercises.splice(exerciseToDelete, 1)
+      setExercises(newExercises)
+    }
+    setDeleteExerciseConfirmOpen(false)
+    setExerciseToDelete(null)
   }
 
   const addExercise = () => {
     setExercises([...exercises, { exerciseId: '', sets: 0, reps: 0 }])
   }
 
-  const handleSubmit = () => {
-    if (!workoutName.trim()) {
-      toast.error('Please enter a workout name')
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (name.length < 3) {
+      toast.error('Workout name must be at least 3 characters long')
       return
     }
 
@@ -111,14 +130,14 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
       return
     }
 
-    if (exercises.some(ex => !ex.exerciseId || ex.sets <= 0 || ex.reps <= 0)) {
-      toast.error('Please fill in all exercise details')
-      return
-    }
-
     onSubmit({
-      name: workoutName,
-      exercises
+      name,
+      exercises: exercises.map(exercise => ({
+        exerciseId: exercise.exerciseId,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        setDetails: exercise.setDetails
+      }))
     })
   }
 
@@ -145,92 +164,115 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
   }
 
   return (
-    <Box>
-      <TextField
+    <>
+      <Box>
+        <TextField
+          fullWidth
+          label='Workout Name'
+          value={name}
+          onChange={e => setName(e.target.value)}
+          error={name.length > 0 && name.length < 3}
+          helperText={name.length > 0 && name.length < 3 ? 'Workout name must be at least 3 characters' : ''}
+          sx={{ mb: 4 }}
+        />
+
+        {exercises.map((exercise, exerciseIndex) => (
+          <Card key={exerciseIndex} sx={{ mb: 4 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems='center'>
+                <Grid item xs={12} sm={3}>
+                  {renderSelect(exercise, exerciseIndex)}
+                </Grid>
+                <Grid item xs={12} sm={2}>
+                  <TextField
+                    fullWidth
+                    type='number'
+                    label='Sets'
+                    value={exercise.sets || ''}
+                    onChange={e => {
+                      const value = Math.max(0, parseInt(e.target.value) || 0)
+                      updateExercise(exerciseIndex, 'sets', value)
+                    }}
+                    inputProps={{ min: 0 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={2}>
+                  <TextField
+                    fullWidth
+                    type='number'
+                    label='Reps'
+                    value={exercise.reps || ''}
+                    onChange={e => {
+                      const value = Math.max(0, parseInt(e.target.value) || 0)
+                      updateExercise(exerciseIndex, 'reps', value)
+                    }}
+                    inputProps={{ min: 0 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                    Weights per Set:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    {Array.from({ length: exercise.sets || 0 }).map((_, setIndex) => (
+                      <TextField
+                        key={setIndex}
+                        type='number'
+                        size='small'
+                        label={`Set ${setIndex + 1} (kg)`}
+                        value={exercise.setDetails?.find(s => s.setNumber === setIndex + 1)?.weight || ''}
+                        onChange={e => {
+                          const value = Math.max(0, parseInt(e.target.value) || 0)
+                          const setDetail = {
+                            setNumber: setIndex + 1,
+                            weight: value
+                          }
+                          updateExercise(exerciseIndex, 'setDetails', setDetail)
+                        }}
+                        inputProps={{ min: 0 }}
+                        sx={{ width: 120 }}
+                      />
+                    ))}
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={2}>
+                  <IconButton color='error' onClick={() => handleRemoveExercise(exerciseIndex)}>
+                    <Icon icon='mdi:delete' />
+                  </IconButton>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        ))}
+
+        <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={addExercise} sx={{ mt: 2, mb: 4 }}>
+          Add Exercise
+        </Button>
+
+        <Button fullWidth variant='contained' onClick={handleSubmit}>
+          Save Workout
+        </Button>
+      </Box>
+
+      {/* Exercise Silme Onay Dialogu */}
+      <Dialog
+        open={deleteExerciseConfirmOpen}
+        onClose={() => setDeleteExerciseConfirmOpen(false)}
+        maxWidth='xs'
         fullWidth
-        label='Workout Name'
-        value={workoutName}
-        onChange={e => setWorkoutName(e.target.value)}
-        sx={{ mb: 4 }}
-      />
-
-      {exercises.map((exercise, exerciseIndex) => (
-        <Card key={exerciseIndex} sx={{ mb: 4 }}>
-          <CardContent>
-            <Grid container spacing={2} alignItems='center'>
-              <Grid item xs={12} sm={3}>
-                {renderSelect(exercise, exerciseIndex)}
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <TextField
-                  fullWidth
-                  type='number'
-                  label='Sets'
-                  value={exercise.sets || ''}
-                  onChange={e => {
-                    const value = Math.max(0, parseInt(e.target.value) || 0)
-                    updateExercise(exerciseIndex, 'sets', value)
-                  }}
-                  inputProps={{ min: 0 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <TextField
-                  fullWidth
-                  type='number'
-                  label='Reps'
-                  value={exercise.reps || ''}
-                  onChange={e => {
-                    const value = Math.max(0, parseInt(e.target.value) || 0)
-                    updateExercise(exerciseIndex, 'reps', value)
-                  }}
-                  inputProps={{ min: 0 }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                  Weights per Set:
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {Array.from({ length: exercise.sets || 0 }).map((_, setIndex) => (
-                    <TextField
-                      key={setIndex}
-                      type='number'
-                      size='small'
-                      label={`Set ${setIndex + 1} (kg)`}
-                      value={exercise.setDetails?.find(s => s.setNumber === setIndex + 1)?.weight || ''}
-                      onChange={e => {
-                        const value = Math.max(0, parseInt(e.target.value) || 0)
-                        const setDetail = {
-                          setNumber: setIndex + 1,
-                          weight: value
-                        }
-                        updateExercise(exerciseIndex, 'setDetails', setDetail)
-                      }}
-                      inputProps={{ min: 0 }}
-                      sx={{ width: 120 }}
-                    />
-                  ))}
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <IconButton color='error' onClick={() => removeExercise(exerciseIndex)}>
-                  <Icon icon='mdi:delete' />
-                </IconButton>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      ))}
-
-      <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={addExercise} sx={{ mt: 2, mb: 4 }}>
-        Add Exercise
-      </Button>
-
-      <Button fullWidth variant='contained' onClick={handleSubmit}>
-        Save Workout
-      </Button>
-    </Box>
+      >
+        <DialogTitle>Remove Exercise</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to remove this exercise?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteExerciseConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDeleteExercise} color='error' variant='contained'>
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   )
 })
 

@@ -9,7 +9,11 @@ import {
   AccordionDetails,
   Card,
   CardContent,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
 import workoutService from 'src/@core/services/workout.service'
@@ -19,6 +23,18 @@ import { Workout, ExerciseType } from 'src/types/workout'
 import Icon from 'src/@core/components/icon'
 import WorkoutForm, { WorkoutFormRef } from 'src/components/workout/WorkoutForm'
 import exerciseService from 'src/@core/services/exercise.service'
+
+const getExerciseId = (exerciseId: string | ExerciseType | null) => {
+  if (!exerciseId) return ''
+  if (typeof exerciseId === 'object') return exerciseId._id || ''
+  return exerciseId
+}
+
+const getExerciseName = (exercise: Workout['exercises'][0], index: number, availableExercises: ExerciseType[]) => {
+  if (!exercise.exerciseId) return `Exercise ${index + 1}`
+  if (typeof exercise.exerciseId === 'object') return exercise.exerciseId?.name || `Exercise ${index + 1}`
+  return availableExercises.find(ex => ex._id === exercise.exerciseId)?.name || `Exercise ${index + 1}`
+}
 
 const WorkoutDetails = ({ workout }: { workout: Workout }) => {
   const [expanded, setExpanded] = useState<string | false>(false)
@@ -53,13 +69,9 @@ const WorkoutDetails = ({ workout }: { workout: Workout }) => {
       {/* Egzersizler */}
       {workout.exercises.map((exercise, index) => (
         <Accordion
-          key={typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId}
-          expanded={
-            expanded === (typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId)
-          }
-          onChange={handleChange(
-            typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-          )}
+          key={getExerciseId(exercise.exerciseId)}
+          expanded={expanded === getExerciseId(exercise.exerciseId)}
+          onChange={handleChange(getExerciseId(exercise.exerciseId))}
           sx={{ mb: 4, boxShadow: 2, '&:before': { display: 'none' }, borderRadius: 1 }}
         >
           <AccordionSummary
@@ -68,9 +80,7 @@ const WorkoutDetails = ({ workout }: { workout: Workout }) => {
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
               <Typography variant='h6' sx={{ color: 'primary.main' }}>
-                {typeof exercise.exerciseId === 'object'
-                  ? exercise.exerciseId.name
-                  : availableExercises.find(ex => ex._id === exercise.exerciseId)?.name || `Exercise ${index + 1}`}
+                {getExerciseName(exercise, index, availableExercises)}
               </Typography>
               <Chip label={`${exercise.sets} sets`} color='primary' size='small' />
             </Box>
@@ -118,10 +128,7 @@ const EditWorkoutPage = () => {
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(edit === 'true')
   const workoutFormRef = useRef<WorkoutFormRef>(null)
-
-  useEffect(() => {
-    setIsEditing(edit === 'true')
-  }, [edit])
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   useEffect(() => {
     const fetchWorkout = async () => {
@@ -178,6 +185,19 @@ const EditWorkoutPage = () => {
     }
   }
 
+  const handleDelete = async () => {
+    try {
+      const response = await workoutService.deleteWorkout(id as string)
+      if (response.success) {
+        toast.success('Workout deleted successfully')
+        router.push('/workouts')
+      }
+    } catch (error) {
+      toast.error('Failed to delete workout')
+    }
+    setDeleteConfirmOpen(false)
+  }
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -187,48 +207,75 @@ const EditWorkoutPage = () => {
   }
 
   return (
-    <Box sx={{ p: 6 }}>
-      {/* Header Container */}
-      <Box sx={{ maxWidth: '800px', margin: '0 auto', px: 4, mb: 6 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-          <Button variant='outlined' startIcon={<Icon icon='mdi:home' />} onClick={() => router.push('/')}>
-            Home
-          </Button>
-          <Button variant='outlined' startIcon={<Icon icon='mdi:arrow-left' />} onClick={() => router.back()}>
-            Back
-          </Button>
+    <>
+      <Box sx={{ p: 6 }}>
+        {/* Header Container */}
+        <Box sx={{ maxWidth: '800px', margin: '0 auto', px: 4, mb: 6 }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+            <Button variant='outlined' startIcon={<Icon icon='mdi:home' />} onClick={() => router.push('/')}>
+              Home
+            </Button>
+            <Button variant='outlined' startIcon={<Icon icon='mdi:arrow-left' />} onClick={() => router.back()}>
+              Back
+            </Button>
+          </Box>
+
+          <Typography variant='h3' sx={{ textAlign: 'center', mb: 4 }}>
+            Workout Details
+          </Typography>
         </Box>
 
-        <Typography variant='h3' sx={{ textAlign: 'center', mb: 4 }}>
-          Workout Details
-        </Typography>
+        {/* Content Container */}
+        <Box sx={{ maxWidth: '800px', margin: '0 auto', px: 4 }}>
+          {workout && (
+            <>
+              {isEditing ? (
+                <WorkoutForm ref={workoutFormRef} onSubmit={handleSubmit} initialData={workout} />
+              ) : (
+                <>
+                  <WorkoutDetails workout={workout} />
+                  <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      startIcon={<Icon icon='mdi:pencil' />}
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Edit Workout
+                    </Button>
+                    <Button
+                      variant='contained'
+                      color='error'
+                      startIcon={<Icon icon='mdi:delete' />}
+                      onClick={() => setDeleteConfirmOpen(true)}
+                    >
+                      Delete Workout
+                    </Button>
+                  </Box>
+                </>
+              )}
+            </>
+          )}
+        </Box>
       </Box>
 
-      {/* Content Container */}
-      <Box sx={{ maxWidth: '800px', margin: '0 auto', px: 4 }}>
-        {workout && (
-          <>
-            {isEditing ? (
-              <WorkoutForm ref={workoutFormRef} onSubmit={handleSubmit} initialData={workout} />
-            ) : (
-              <>
-                <WorkoutDetails workout={workout} />
-                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                  <Button
-                    variant='contained'
-                    color='primary'
-                    startIcon={<Icon icon='mdi:pencil' />}
-                    onClick={() => setIsEditing(true)}
-                  >
-                    Edit Workout
-                  </Button>
-                </Box>
-              </>
-            )}
-          </>
-        )}
-      </Box>
-    </Box>
+      {/* Delete Onay Dialogu */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Delete Workout</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete "{workout?.name}"?</Typography>
+          <Typography color='error' sx={{ mt: 2 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDelete} color='error' variant='contained'>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   )
 }
 
