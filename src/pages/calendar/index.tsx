@@ -1,9 +1,12 @@
 import { Box, Typography, Paper, Button } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { Icon } from '@iconify/react'
+import DayWorkoutDialog from 'src/components/calendar/DayWorkoutDialog'
+import workoutService from 'src/@core/services/workout.service'
+import { Workout } from 'src/types/workout'
 
 // Basit bir takvim grid'i için styled component
 const CalendarGrid = styled(Box)(({ theme }) => ({
@@ -28,6 +31,8 @@ const CalendarCell = styled(Paper, {
 
 const CalendarPage = () => {
   const router = useRouter()
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [scheduledWorkout, setScheduledWorkout] = useState<Workout | undefined>(undefined)
 
   const { days, currentDate } = useMemo(() => {
     const now = new Date()
@@ -80,6 +85,37 @@ const CalendarPage = () => {
     }
   }, [])
 
+  const handleDayClick = async (date: Date) => {
+    try {
+      const response = await workoutService.getScheduledWorkout(date)
+      if (response.success) {
+        setScheduledWorkout(response.data)
+      } else {
+        setScheduledWorkout(undefined)
+      }
+      setSelectedDate(date)
+    } catch (error) {
+      console.error('Error fetching scheduled workout:', error)
+      setScheduledWorkout(undefined)
+    }
+  }
+
+  const refreshCalendar = async () => {
+    if (selectedDate) {
+      try {
+        const response = await workoutService.getScheduledWorkout(selectedDate)
+        if (response.success) {
+          setScheduledWorkout(response.data)
+        } else {
+          setScheduledWorkout(undefined)
+        }
+      } catch (error) {
+        console.error('Error refreshing calendar:', error)
+        setScheduledWorkout(undefined)
+      }
+    }
+  }
+
   return (
     <Box sx={{ p: 6 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 6 }}>
@@ -98,12 +134,18 @@ const CalendarPage = () => {
           </Typography>
         ))}
 
-        {/* Takvim hücreleri - örnek olarak 31 gün */}
+        {/* Takvim hücreleri */}
         {days.map((dayInfo, index) => (
           <CalendarCell
             key={index}
             elevation={1}
             isToday={dayInfo?.isToday}
+            onClick={() => {
+              if (dayInfo) {
+                const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayInfo.day)
+                handleDayClick(clickedDate)
+              }
+            }}
             sx={{
               opacity: dayInfo?.isCurrentMonth ? 1 : 0.5
             }}
@@ -112,6 +154,18 @@ const CalendarPage = () => {
           </CalendarCell>
         ))}
       </CalendarGrid>
+      {selectedDate && (
+        <DayWorkoutDialog
+          open={!!selectedDate}
+          onClose={() => {
+            setSelectedDate(null)
+            setScheduledWorkout(undefined)
+          }}
+          selectedDate={selectedDate}
+          scheduledWorkout={scheduledWorkout}
+          onSave={refreshCalendar}
+        />
+      )}
     </Box>
   )
 }

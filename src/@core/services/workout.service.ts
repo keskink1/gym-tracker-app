@@ -3,6 +3,15 @@ import { Workout } from 'src/types/workout'
 import { BaseResponse } from '../models/base-response'
 import { BaseSuccessResponse } from 'src/types/auth'
 
+interface CalendarEntry {
+  _id: string
+  userId: string
+  date: string
+  workoutId: Workout
+  createdAt: string
+  updatedAt: string
+}
+
 const workoutService = {
   // Tüm workoutları getir
   getAllWorkouts: async (): Promise<BaseResponse<Workout[]>> => {
@@ -61,6 +70,84 @@ const workoutService = {
     return {
       success: true,
       data: null
+    }
+  },
+
+  scheduleWorkout: async (data: { workoutId: string; scheduledDate: Date }): Promise<BaseResponse<void>> => {
+    try {
+      const response = await axiosClient.post('/calendar', {
+        workoutId: data.workoutId,
+        date: data.scheduledDate.toISOString().split('T')[0]
+      })
+
+      if (response.data) {
+        return {
+          success: true,
+          data: undefined
+        }
+      } else {
+        return {
+          success: false,
+          error: {
+            property: 'calendar',
+            message: 'Failed to schedule workout'
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Schedule workout error:', error.response?.data || error)
+      return {
+        success: false,
+        error: {
+          property: 'calendar',
+          message: error.response?.data || 'Failed to schedule workout'
+        }
+      }
+    }
+  },
+
+  getScheduledWorkout: async (date: Date): Promise<BaseResponse<Workout | undefined>> => {
+    try {
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+      const { data } = await axiosClient.get<CalendarEntry[]>(`/calendar/month/${year}/${month}`)
+
+      const targetDate = date.toISOString().split('T')[0]
+      const entry = data.find((entry: CalendarEntry) => entry.date.split('T')[0] === targetDate)
+
+      return {
+        success: true,
+        data: entry?.workoutId || undefined
+      }
+    } catch (error: any) {
+      console.error('Get scheduled workout error:', error.response?.data || error)
+      return {
+        success: false,
+        error: {
+          property: 'calendar',
+          message: error.response?.data || 'Failed to get scheduled workout'
+        }
+      }
+    }
+  },
+
+  deleteScheduledWorkout: async (date: Date): Promise<BaseResponse<void>> => {
+    try {
+      const formattedDate = date.toISOString().split('T')[0]
+      await axiosClient.delete(`/calendar/${formattedDate}`)
+      return {
+        success: true,
+        data: undefined
+      }
+    } catch (error: any) {
+      console.error('Delete scheduled workout error:', error.response?.data || error)
+      return {
+        success: false,
+        error: {
+          property: 'calendar',
+          message: error.response?.data || 'Failed to delete scheduled workout'
+        }
+      }
     }
   }
 }
