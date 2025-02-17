@@ -2,8 +2,16 @@
 export interface ExerciseType {
   _id: string
   name: string
+  type: string
   description?: string
-  type?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// Yeni egzersiz oluştururken kullanılacak tip
+export interface CreateExerciseType {
+  name: string
+  type: string
 }
 
 export interface ExerciseSession {

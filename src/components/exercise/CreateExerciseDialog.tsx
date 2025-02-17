@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 import exerciseService from 'src/@core/services/exercise.service'
 import toast from 'react-hot-toast'
+import { CreateExerciseType } from 'src/types/workout'
 
 interface CreateExerciseDialogProps {
   open: boolean
@@ -22,7 +23,6 @@ interface CreateExerciseDialogProps {
 
 const CreateExerciseDialog = ({ open, onClose, onSuccess }: CreateExerciseDialogProps) => {
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
   const [type, setType] = useState('')
 
   const handleSubmit = async () => {
@@ -31,12 +31,18 @@ const CreateExerciseDialog = ({ open, onClose, onSuccess }: CreateExerciseDialog
       return
     }
 
+    if (!type) {
+      toast.error('Please select exercise type')
+      return
+    }
+
     try {
-      const response = await exerciseService.createExercise({
+      const exerciseData: CreateExerciseType = {
         name: name.trim(),
-        description: description.trim(),
         type: type
-      })
+      }
+
+      const response = await exerciseService.createExercise(exerciseData)
 
       if (response.success) {
         toast.success('Exercise created successfully')
@@ -65,16 +71,6 @@ const CreateExerciseDialog = ({ open, onClose, onSuccess }: CreateExerciseDialog
           fullWidth
           value={name}
           onChange={e => setName(e.target.value)}
-          sx={{ mb: 4 }}
-        />
-        <TextField
-          margin='dense'
-          label='Description'
-          fullWidth
-          multiline
-          rows={3}
-          value={description}
-          onChange={e => setDescription(e.target.value)}
           sx={{ mb: 4 }}
         />
         <FormControl fullWidth>
