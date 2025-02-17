@@ -12,12 +12,17 @@ export interface ExerciseSession {
   completedAt: string // Tamamlanma tarihi
 }
 
+interface SetDetail {
+  setNumber: number
+  weight: number
+}
+
 // Workout içindeki egzersiz instance'ı
 export interface WorkoutExercise {
   exerciseId: string | ExerciseType
   sets: number
   reps: number
-  weight?: number
+  setDetails?: SetDetail[]
   sessions?: ExerciseSession[] // Egzersiz oturumları
 }
 

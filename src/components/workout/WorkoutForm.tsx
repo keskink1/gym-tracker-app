@@ -10,7 +10,8 @@ import {
   Select,
   MenuItem,
   Card,
-  CardContent
+  CardContent,
+  Typography
 } from '@mui/material'
 import Icon from 'src/@core/components/icon'
 import { Workout, WorkoutExercise, ExerciseType } from 'src/types/workout'
@@ -62,14 +63,33 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
     }
   }))
 
-  const updateExercise = (index: number, field: keyof WorkoutExercise, value: any) => {
+  const updateExercise = (index: number, field: string, value: any) => {
     console.log('Updating exercise:', { index, field, value })
-    const updatedExercises = [...exercises]
-    updatedExercises[index] = {
-      ...updatedExercises[index],
-      [field]: field === 'exerciseId' ? String(value || '') : value
-    }
-    setExercises(updatedExercises)
+    setExercises(prev => {
+      const newExercises = [...prev]
+      if (field === 'setDetails') {
+        const exercise = newExercises[index]
+        const newSetDetails = [...(exercise.setDetails || [])]
+        const setIndex = newSetDetails.findIndex(s => s.setNumber === value.setNumber)
+
+        if (setIndex >= 0) {
+          newSetDetails[setIndex] = value
+        } else {
+          newSetDetails.push(value)
+        }
+
+        newExercises[index] = {
+          ...exercise,
+          setDetails: newSetDetails
+        }
+      } else {
+        newExercises[index] = {
+          ...newExercises[index],
+          [field]: value
+        }
+      }
+      return newExercises
+    })
   }
 
   const removeExercise = (index: number) => {
@@ -134,12 +154,12 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
         sx={{ mb: 4 }}
       />
 
-      {exercises.map((exercise, index) => (
-        <Card key={index} sx={{ mb: 4 }}>
+      {exercises.map((exercise, exerciseIndex) => (
+        <Card key={exerciseIndex} sx={{ mb: 4 }}>
           <CardContent>
             <Grid container spacing={2} alignItems='center'>
               <Grid item xs={12} sm={3}>
-                {renderSelect(exercise, index)}
+                {renderSelect(exercise, exerciseIndex)}
               </Grid>
               <Grid item xs={12} sm={2}>
                 <TextField
@@ -149,7 +169,7 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
                   value={exercise.sets || ''}
                   onChange={e => {
                     const value = Math.max(0, parseInt(e.target.value) || 0)
-                    updateExercise(index, 'sets', value)
+                    updateExercise(exerciseIndex, 'sets', value)
                   }}
                   inputProps={{ min: 0 }}
                 />
@@ -162,26 +182,39 @@ const WorkoutForm = forwardRef<WorkoutFormRef, WorkoutFormProps>(({ onSubmit, in
                   value={exercise.reps || ''}
                   onChange={e => {
                     const value = Math.max(0, parseInt(e.target.value) || 0)
-                    updateExercise(index, 'reps', value)
+                    updateExercise(exerciseIndex, 'reps', value)
                   }}
                   inputProps={{ min: 0 }}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  type='number'
-                  label='Weight (kg)'
-                  value={exercise.weight || ''}
-                  onChange={e => {
-                    const value = Math.max(0, parseInt(e.target.value) || 0)
-                    updateExercise(index, 'weight', value || undefined)
-                  }}
-                  inputProps={{ min: 0 }}
-                />
+              <Grid item xs={12}>
+                <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                  Weights per Set:
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  {Array.from({ length: exercise.sets || 0 }).map((_, setIndex) => (
+                    <TextField
+                      key={setIndex}
+                      type='number'
+                      size='small'
+                      label={`Set ${setIndex + 1} (kg)`}
+                      value={exercise.setDetails?.find(s => s.setNumber === setIndex + 1)?.weight || ''}
+                      onChange={e => {
+                        const value = Math.max(0, parseInt(e.target.value) || 0)
+                        const setDetail = {
+                          setNumber: setIndex + 1,
+                          weight: value
+                        }
+                        updateExercise(exerciseIndex, 'setDetails', setDetail)
+                      }}
+                      inputProps={{ min: 0 }}
+                      sx={{ width: 120 }}
+                    />
+                  ))}
+                </Box>
               </Grid>
               <Grid item xs={12} sm={2}>
-                <IconButton color='error' onClick={() => removeExercise(index)}>
+                <IconButton color='error' onClick={() => removeExercise(exerciseIndex)}>
                   <Icon icon='mdi:delete' />
                 </IconButton>
               </Grid>

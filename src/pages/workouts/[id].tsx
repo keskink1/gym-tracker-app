@@ -15,28 +15,14 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 import workoutService from 'src/@core/services/workout.service'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { Workout, WorkoutExercise, ExerciseType, ExerciseSession } from 'src/types/workout'
+import { Workout, ExerciseType } from 'src/types/workout'
 import Icon from 'src/@core/components/icon'
 import WorkoutForm, { WorkoutFormRef } from 'src/components/workout/WorkoutForm'
 import exerciseService from 'src/@core/services/exercise.service'
 
-const WorkoutDetails = ({
-  workout,
-  setWorkout,
-  isEditing
-}: {
-  workout: Workout
-  setWorkout: (workout: Workout) => void
-  isEditing: boolean
-}) => {
+const WorkoutDetails = ({ workout }: { workout: Workout }) => {
   const [expanded, setExpanded] = useState<string | false>(false)
   const [availableExercises, setAvailableExercises] = useState<ExerciseType[]>([])
-  const [activeExercise, setActiveExercise] = useState<string | null>(null)
-  const [isExercisePaused, setIsExercisePaused] = useState(false)
-  const [exerciseTime, setExerciseTime] = useState(0)
-  const [restTime, setRestTime] = useState(0)
-  const exerciseTimerRef = useRef<NodeJS.Timeout>()
-  const restTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -50,116 +36,8 @@ const WorkoutDetails = ({
     fetchExercises()
   }, [])
 
-  // Timer'ları temizle
-  useEffect(() => {
-    return () => {
-      if (exerciseTimerRef.current) clearInterval(exerciseTimerRef.current)
-      if (restTimerRef.current) clearInterval(restTimerRef.current)
-    }
-  }, [])
-
   const handleChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpanded(isExpanded ? panel : false)
-  }
-
-  const handleStartExercise = (exerciseId: string) => {
-    setActiveExercise(exerciseId)
-    setExerciseTime(0)
-    exerciseTimerRef.current = setInterval(() => {
-      setExerciseTime(prev => prev + 1)
-    }, 1000)
-  }
-
-  const handleTimeout = () => {
-    setIsExercisePaused(true)
-    clearInterval(exerciseTimerRef.current)
-    setRestTime(0)
-    restTimerRef.current = setInterval(() => {
-      setRestTime(prev => prev + 1)
-    }, 1000)
-  }
-
-  const handleContinue = () => {
-    setIsExercisePaused(false)
-    clearInterval(restTimerRef.current)
-    setRestTime(0)
-    exerciseTimerRef.current = setInterval(() => {
-      setExerciseTime(prev => prev + 1)
-    }, 1000)
-  }
-
-  const handleFinishExercise = async (exercise: WorkoutExercise) => {
-    try {
-      const currentExerciseId = typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-
-      const updatedExercises = workout.exercises.map(ex => {
-        const exId = typeof ex.exerciseId === 'object' ? ex.exerciseId._id : ex.exerciseId
-
-        if (exId === currentExerciseId) {
-          // Önceki sessions'ları _id olmadan yeni array'e kopyala
-          const previousSessions = (ex.sessions || []).map(session => ({
-            exerciseTime: session.exerciseTime,
-            restTime: session.restTime,
-            completedAt: session.completedAt
-          }))
-
-          return {
-            exerciseId: exId,
-            sets: ex.sets,
-            reps: ex.reps,
-            weight: ex.weight,
-            sessions: [
-              ...previousSessions,
-              {
-                exerciseTime,
-                restTime,
-                completedAt: new Date().toISOString()
-              }
-            ]
-          }
-        }
-        return {
-          exerciseId: exId,
-          sets: ex.sets,
-          reps: ex.reps,
-          weight: ex.weight,
-          sessions: ex.sessions?.map(session => ({
-            exerciseTime: session.exerciseTime,
-            restTime: session.restTime,
-            completedAt: session.completedAt
-          }))
-        }
-      })
-
-      const response = await workoutService.updateWorkout(workout._id, {
-        name: workout.name,
-        exercises: updatedExercises
-      })
-
-      if (response.success) {
-        setWorkout({
-          ...workout,
-          exercises: updatedExercises
-        })
-        toast.success('Exercise session saved')
-      }
-    } catch (error) {
-      console.error('Error saving exercise session:', error)
-      toast.error('Failed to save exercise session')
-    } finally {
-      setActiveExercise(null)
-      setIsExercisePaused(false)
-      clearInterval(exerciseTimerRef.current)
-      clearInterval(restTimerRef.current)
-      setExerciseTime(0)
-      setRestTime(0)
-    }
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   return (
@@ -182,19 +60,11 @@ const WorkoutDetails = ({
           onChange={handleChange(
             typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
           )}
-          sx={{
-            mb: 4,
-            boxShadow: 2,
-            '&:before': { display: 'none' },
-            borderRadius: 1
-          }}
+          sx={{ mb: 4, boxShadow: 2, '&:before': { display: 'none' }, borderRadius: 1 }}
         >
           <AccordionSummary
             expandIcon={<Icon icon='mdi:chevron-down' />}
-            sx={{
-              backgroundColor: 'action.hover',
-              borderRadius: 1
-            }}
+            sx={{ backgroundColor: 'action.hover', borderRadius: 1 }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
               <Typography variant='h6' sx={{ color: 'primary.main' }}>
@@ -222,11 +92,9 @@ const WorkoutDetails = ({
                           <Typography variant='body2' gutterBottom>
                             Reps: {exercise.reps}
                           </Typography>
-
-                          {/* Weight gösterimi */}
                           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant='body2' color='text.secondary'>
-                              {exercise.weight ? `Weight: ${exercise.weight} kg` : 'No weight set'}
+                              Weight: {exercise.setDetails?.find(s => s.setNumber === setIndex + 1)?.weight || 0} kg
                             </Typography>
                           </Box>
                         </CardContent>
@@ -234,91 +102,10 @@ const WorkoutDetails = ({
                     ))}
                   </Box>
                 </Box>
-
-                {/* Timer ve butonlar */}
-                <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  {activeExercise ===
-                    (typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId) && (
-                    <>
-                      <Typography variant='h6'>
-                        Exercise Time: {formatTime(exerciseTime)}
-                        {isExercisePaused && restTime > 0 && ` (Rest: ${formatTime(restTime)})`}
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                          variant='contained'
-                          color={isExercisePaused ? 'success' : 'warning'}
-                          size='small'
-                          onClick={isExercisePaused ? handleContinue : handleTimeout}
-                        >
-                          {isExercisePaused ? 'Continue' : 'Timeout'}
-                        </Button>
-                        <Button
-                          variant='contained'
-                          color='error'
-                          size='small'
-                          onClick={() => handleFinishExercise(exercise)}
-                        >
-                          Finish Exercise
-                        </Button>
-                      </Box>
-                    </>
-                  )}
-                  {!activeExercise && !isEditing && (
-                    <Button
-                      variant='contained'
-                      color='primary'
-                      size='small'
-                      startIcon={<Icon icon='mdi:play' />}
-                      onClick={() =>
-                        handleStartExercise(
-                          typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-                        )
-                      }
-                    >
-                      Start Exercise
-                    </Button>
-                  )}
-                </Box>
-
-                {/* Egzersiz geçmişini göster */}
-                <ExerciseHistory sessions={exercise.sessions} formatTime={formatTime} />
               </CardContent>
             </Card>
           </AccordionDetails>
         </Accordion>
-      ))}
-    </Box>
-  )
-}
-
-// Egzersiz geçmişini göstermek için yeni bir component
-const ExerciseHistory = ({
-  sessions,
-  formatTime
-}: {
-  sessions?: ExerciseSession[]
-  formatTime: (seconds: number) => string
-}) => {
-  if (!sessions?.length) return null
-
-  return (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant='subtitle1' gutterBottom>
-        Exercise History:
-      </Typography>
-      {sessions.map((session, idx) => (
-        <Card key={idx} variant='outlined' sx={{ mb: 1, p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant='body2'>
-              Exercise Time: {formatTime(session.exerciseTime)}
-              {session.restTime > 0 && ` (Rest: ${formatTime(session.restTime)})`}
-            </Typography>
-            <Typography variant='caption' color='text.secondary'>
-              {new Date(session.completedAt).toLocaleDateString()} {new Date(session.completedAt).toLocaleTimeString()}
-            </Typography>
-          </Box>
-        </Card>
       ))}
     </Box>
   )
@@ -366,16 +153,15 @@ const EditWorkoutPage = () => {
     try {
       const response = await workoutService.updateWorkout(id as string, {
         name: workoutData.name,
-        exercises: workoutData.exercises.map(exercise => {
-          const exerciseId = typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId
-
-          return {
-            exerciseId,
-            sets: exercise.sets,
-            reps: exercise.reps,
-            weight: exercise.weight
-          }
-        })
+        exercises: workoutData.exercises.map(exercise => ({
+          exerciseId: typeof exercise.exerciseId === 'object' ? exercise.exerciseId._id : exercise.exerciseId,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          setDetails: Array.from({ length: exercise.sets }, (_, i) => ({
+            setNumber: i + 1,
+            weight: exercise.setDetails?.find(s => s.setNumber === i + 1)?.weight || 0
+          }))
+        }))
       })
 
       if (response.success) {
@@ -426,7 +212,7 @@ const EditWorkoutPage = () => {
               <WorkoutForm ref={workoutFormRef} onSubmit={handleSubmit} initialData={workout} />
             ) : (
               <>
-                <WorkoutDetails workout={workout} setWorkout={setWorkout} isEditing={isEditing} />
+                <WorkoutDetails workout={workout} />
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                   <Button
                     variant='contained'
