@@ -21,7 +21,10 @@ interface WorkoutSummary {
   totalWorkouts: number
   totalExercises: number
   mostFrequentWorkout?: string
-  workoutDates: string[]
+  workoutDates: Array<{
+    date: string
+    workoutName: string
+  }>
 }
 
 const OverviewPage = () => {
@@ -39,14 +42,16 @@ const OverviewPage = () => {
         const year = new Date().getFullYear()
         const response = await workoutService.getMonthlyOverview(year, selectedMonth + 1)
         if (response.success) {
-          // Veriyi işle
           const summary: WorkoutSummary = {
             totalWorkouts: response.data.length,
             totalExercises: response.data.reduce(
               (total: number, entry: any) => total + (entry.workoutId?.exercises?.length || 0),
               0
             ),
-            workoutDates: response.data.map((entry: any) => new Date(entry.date).toLocaleDateString())
+            workoutDates: response.data.map((entry: any) => ({
+              date: new Date(entry.date).toLocaleDateString(),
+              workoutName: entry.workoutId?.name || 'Unknown Workout'
+            }))
           }
 
           // En sık yapılan workout'u bul
@@ -156,8 +161,13 @@ const OverviewPage = () => {
                   Workout Dates
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {monthlyData.workoutDates.map((date, index) => (
-                    <Chip key={index} label={date} />
+                  {monthlyData.workoutDates.map((workout, index) => (
+                    <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', m: 1 }}>
+                      <Chip label={workout.date} sx={{ mb: 1 }} />
+                      <Typography variant='caption' color='textSecondary'>
+                        {workout.workoutName}
+                      </Typography>
+                    </Box>
                   ))}
                 </Box>
               </CardContent>
