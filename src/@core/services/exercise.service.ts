@@ -1,5 +1,5 @@
 import { axiosClient } from 'src/configs/axios-client'
-import { BaseSuccessResponse } from 'src/types/auth'
+import { BaseResponse, BaseSuccessResponse } from 'src/types/auth'
 import { ExerciseType, CreateExerciseType } from 'src/types/workout'
 
 const exerciseService = {
@@ -13,6 +13,23 @@ const exerciseService = {
     return {
       success: true,
       result: data
+    }
+  },
+
+  deleteExercise: async (exerciseId: string): Promise<BaseResponse<void>> => {
+    try {
+      await axiosClient.delete(`/exercises/${exerciseId}`)
+      return {
+        success: true,
+        result: undefined
+      }
+    } catch (error: any) {
+      // Backend'den gelen özel hata mesajını kullan
+      const errorMessage = error.response?.data || 'Failed to delete exercise'
+      return {
+        success: false,
+        error: errorMessage
+      }
     }
   }
 }

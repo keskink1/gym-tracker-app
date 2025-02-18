@@ -149,6 +149,60 @@ const workoutService = {
         }
       }
     }
+  },
+
+  getMonthlyExerciseData: async (year: number, month: number): Promise<BaseResponse<any>> => {
+    try {
+      const { data } = await axiosClient.get(`/calendar/month/${year}/${month}`)
+      return {
+        success: true,
+        data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          property: 'calendar',
+          message: 'Failed to fetch exercise data'
+        }
+      }
+    }
+  },
+
+  getMonthlyWorkouts: async (year: number, month: number): Promise<BaseResponse<CalendarEntry[]>> => {
+    try {
+      const { data } = await axiosClient.get(`/calendar/month/${year}/${month}`)
+      return {
+        success: true,
+        data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          property: 'calendar',
+          message: 'Failed to fetch monthly workouts'
+        }
+      }
+    }
+  },
+
+  getMonthlyOverview: async (year: number, month: number): Promise<BaseResponse<any>> => {
+    try {
+      const { data } = await axiosClient.get(`/calendar/month/${year}/${month}`)
+      return {
+        success: true,
+        data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          property: 'calendar',
+          message: 'Failed to fetch monthly overview'
+        }
+      }
+    }
   }
 }
 

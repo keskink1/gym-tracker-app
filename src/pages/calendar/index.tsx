@@ -1,7 +1,7 @@
 import { Box, Typography, Paper, Button } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
-import { ReactNode, useMemo, useState } from 'react'
+import { ReactNode, useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Icon } from '@iconify/react'
 import DayWorkoutDialog from 'src/components/calendar/DayWorkoutDialog'
@@ -29,10 +29,29 @@ const CalendarCell = styled(Paper, {
   }
 }))
 
+interface CalendarDay {
+  day: number
+  isCurrentMonth: boolean
+  isToday?: boolean
+  workout?: {
+    name: string
+    _id: string
+  }
+}
+
+interface CalendarEntry {
+  date: string
+  workoutId: {
+    _id: string
+    name: string
+  }
+}
+
 const CalendarPage = () => {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [scheduledWorkout, setScheduledWorkout] = useState<Workout | undefined>(undefined)
+  const [calendarData, setCalendarData] = useState<CalendarDay[]>([])
 
   const { days, currentDate } = useMemo(() => {
     const now = new Date()
@@ -85,6 +104,36 @@ const CalendarPage = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      try {
+        const year = currentDate.getFullYear()
+        const month = currentDate.getMonth() + 1
+        const response = await workoutService.getMonthlyWorkouts(year, month)
+
+        if (response.success) {
+          const updatedDays = days.map(day => {
+            if (day.isCurrentMonth) {
+              const date = new Date(year, month - 1, day.day).toISOString().split('T')[0]
+              const workoutForDay = response.data.find((entry: CalendarEntry) => entry.date.split('T')[0] === date)
+
+              return {
+                ...day,
+                workout: workoutForDay?.workoutId
+              }
+            }
+            return day
+          })
+          setCalendarData(updatedDays)
+        }
+      } catch (error) {
+        console.error('Error fetching calendar data:', error)
+      }
+    }
+
+    fetchCalendarData()
+  }, [currentDate, days])
+
   const handleDayClick = async (date: Date) => {
     try {
       const response = await workoutService.getScheduledWorkout(date)
@@ -135,7 +184,7 @@ const CalendarPage = () => {
         ))}
 
         {/* Takvim hücreleri */}
-        {days.map((dayInfo, index) => (
+        {calendarData.map((dayInfo, index) => (
           <CalendarCell
             key={index}
             elevation={1}
@@ -147,10 +196,32 @@ const CalendarPage = () => {
               }
             }}
             sx={{
-              opacity: dayInfo?.isCurrentMonth ? 1 : 0.5
+              opacity: dayInfo?.isCurrentMonth ? 1 : 0.5,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
             }}
           >
             <Typography>{dayInfo?.day}</Typography>
+            {dayInfo?.workout && (
+              <Typography
+                variant='caption'
+                sx={{
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  p: 0.5,
+                  borderRadius: 1,
+                  mt: 1,
+                  fontSize: '0.7rem',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {dayInfo.workout.name}
+              </Typography>
+            )}
           </CalendarCell>
         ))}
       </CalendarGrid>

@@ -4,19 +4,19 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 import exerciseService from 'src/@core/services/exercise.service'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { ExerciseType } from 'src/types/workout'
+import { CreateExerciseType } from 'src/types/workout'
 import { Icon } from '@iconify/react'
 import ExerciseForm from 'src/components/exercise/ExerciseForm'
 
 const CreateExercisePage = () => {
   const router = useRouter()
 
-  const handleSubmit = async (exerciseData: Omit<ExerciseType, '_id'>) => {
+  const handleSubmit = async (exerciseData: CreateExerciseType) => {
     try {
       const response = await exerciseService.createExercise(exerciseData)
       if (response.success) {
         toast.success('Exercise created successfully')
-        router.push('/')
+        router.push('/exercises')
       }
     } catch (error) {
       toast.error('Error creating exercise')
@@ -41,6 +41,9 @@ const CreateExercisePage = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button variant='outlined' startIcon={<Icon icon='mdi:home' />} onClick={() => router.push('/')}>
             Home
+          </Button>
+          <Button variant='outlined' startIcon={<Icon icon='mdi:arrow-left' />} onClick={() => router.back()}>
+            Back
           </Button>
         </Box>
 
