@@ -1,4 +1,4 @@
-import { Box, Typography, Paper, Button } from '@mui/material'
+import { Box, Typography, Paper, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
 import { ReactNode, useMemo, useState, useEffect } from 'react'
@@ -52,12 +52,16 @@ const CalendarPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [scheduledWorkout, setScheduledWorkout] = useState<Workout | undefined>(undefined)
   const [calendarData, setCalendarData] = useState<CalendarDay[]>([])
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
+  const [selectedYear] = useState(new Date().getFullYear())
 
   const { days, currentDate } = useMemo(() => {
-    const now = new Date()
+    // Seçili ay ve yıl için tarihi oluştur
+    const now = new Date(selectedYear, selectedMonth)
     const year = now.getFullYear()
     const month = now.getMonth()
-    const today = now.getDate()
+    const today = new Date().getDate()
+    const isCurrentMonth = month === new Date().getMonth() && year === new Date().getFullYear()
 
     // Ayın ilk gününü bul
     const firstDay = new Date(year, month, 1)
@@ -85,7 +89,7 @@ const CalendarPage = () => {
       days[startingDay + i - 1] = {
         day: i,
         isCurrentMonth: true,
-        isToday: i === today
+        isToday: isCurrentMonth && i === today
       }
     }
 
@@ -102,7 +106,7 @@ const CalendarPage = () => {
       days,
       currentDate: now
     }
-  }, [])
+  }, [selectedMonth, selectedYear])
 
   useEffect(() => {
     const fetchCalendarData = async () => {
@@ -149,21 +153,50 @@ const CalendarPage = () => {
     }
   }
 
-  const refreshCalendar = async () => {
-    if (selectedDate) {
-      try {
-        const response = await workoutService.getScheduledWorkout(selectedDate)
-        if (response.success) {
-          setScheduledWorkout(response.data)
-        } else {
-          setScheduledWorkout(undefined)
-        }
-      } catch (error) {
-        console.error('Error refreshing calendar:', error)
-        setScheduledWorkout(undefined)
+  const refreshCalendarData = async () => {
+    try {
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth() + 1
+      const response = await workoutService.getMonthlyWorkouts(year, month)
+
+      if (response.success) {
+        const updatedDays = days.map(day => {
+          if (day.isCurrentMonth) {
+            const date = new Date(year, month - 1, day.day).toISOString().split('T')[0]
+            const workoutForDay = response.data.find((entry: CalendarEntry) => entry.date.split('T')[0] === date)
+
+            return {
+              ...day,
+              workout: workoutForDay?.workoutId
+            }
+          }
+          return day
+        })
+        setCalendarData(updatedDays)
       }
+    } catch (error) {
+      console.error('Error refreshing calendar data:', error)
     }
   }
+
+  const handleWorkoutSave = async () => {
+    await refreshCalendarData()
+  }
+
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  ]
 
   return (
     <Box sx={{ p: 6 }}>
@@ -171,9 +204,17 @@ const CalendarPage = () => {
         <Button variant='outlined' startIcon={<Icon icon='mdi:home' />} onClick={() => router.push('/')}>
           Home
         </Button>
-        <Typography variant='h3'>
-          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-        </Typography>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Select Month</InputLabel>
+          <Select value={selectedMonth} label='Select Month' onChange={e => setSelectedMonth(Number(e.target.value))}>
+            {months.map((month, index) => (
+              <MenuItem key={index} value={index}>
+                {month}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Typography variant='h3'>{currentDate.toLocaleString('default', { year: 'numeric' })}</Typography>
       </Box>
       <CalendarGrid>
         {/* Haftanın günleri */}
@@ -234,7 +275,7 @@ const CalendarPage = () => {
           }}
           selectedDate={selectedDate}
           scheduledWorkout={scheduledWorkout}
-          onSave={refreshCalendar}
+          onSave={handleWorkoutSave}
         />
       )}
     </Box>

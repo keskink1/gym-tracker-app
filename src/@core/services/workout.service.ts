@@ -75,9 +75,13 @@ const workoutService = {
 
   scheduleWorkout: async (data: { workoutId: string; scheduledDate: Date }): Promise<BaseResponse<void>> => {
     try {
+      // Tarihi ISO formatına çevir ama saat kısmını sıfırla
+      const date = new Date(data.scheduledDate)
+      date.setHours(0, 0, 0, 0)
+
       const response = await axiosClient.post('/calendar', {
         workoutId: data.workoutId,
-        date: data.scheduledDate.toISOString().split('T')[0]
+        date: date.toISOString()
       })
 
       if (response.data) {
