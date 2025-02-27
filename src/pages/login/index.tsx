@@ -36,7 +36,6 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 
 // ** Demo Imports
 import toast from 'react-hot-toast'
-import { PricialLogoSvg } from 'src/@core/layouts/components/horizontal/app-bar-content'
 import FooterIllustrationsV2 from 'src/views/pages/auth/FooterIllustrationsV2'
 
 // ** Styled Components
@@ -153,9 +152,7 @@ const LoginPage = () => {
                 mb: 24,
                 filter: 'drop-shadow(1px 2px 1px #000)'
               }}
-            >
-              <PricialLogoSvg height={48} />
-            </Box>
+            ></Box>
             <Box sx={{ my: 6 }}>
               <Typography variant='h3' sx={{ mb: 1.5 }}>
                 {`Welcome to ${themeConfig.templateName}! 👋🏻`}

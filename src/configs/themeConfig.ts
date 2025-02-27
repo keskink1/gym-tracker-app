@@ -49,7 +49,7 @@ type ThemeConfig = {
 
 const themeConfig: ThemeConfig = {
   // ** Layout Configs
-  templateName: 'Pricial' /* App Name */,
+  templateName: 'GymTracker' /* App Name */,
   layout: 'horizontal' /* vertical | horizontal */,
   mode: 'dark' as Mode /* light | dark | semi-dark /*! Note: semi-dark value will only work for Vertical Layout */,
   direction: 'ltr' /* ltr | rtl */,
@@ -81,7 +81,7 @@ const themeConfig: ThemeConfig = {
   responsiveFontSizes: false /* true | false */,
   disableRipple: false /* true | false */,
   disableCustomizer: true /* true | false */,
-  toastPosition: 'top-right' /* top-left | top-center | top-right | bottom-left | bottom-center | bottom-right */,
+  toastPosition: 'top-right' /* top-left | top-center | top-right | bottom-left | bottom-center | bottom-right */
 }
 
 export default themeConfig

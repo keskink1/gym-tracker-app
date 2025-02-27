@@ -109,12 +109,9 @@ const App = (props: ExtendedAppProps) => {
   return (
     <CacheProvider value={emotionCache}>
       <Head>
-        <title>{`${themeConfig.templateName} - Simple subscriptions`}</title>
-        <meta
-          name='description'
-          content={`${themeConfig.templateName} – Manage your stripe subscriptions in a fun way.`}
-        />
-        <meta name='keywords' content='Pricial, stripe, stripe subscription' />
+        <title>{`${themeConfig.templateName} - Track your gym progress`}</title>
+        <meta name='description' content={`${themeConfig.templateName} – Manage your workouts in a fun way.`} />
+        <meta name='keywords' content='GymTracker, stripe, stripe subscription' />
         <meta name='viewport' content='initial-scale=1, width=device-width' />
       </Head>
 

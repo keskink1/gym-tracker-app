@@ -68,7 +68,7 @@ const UserDropdown = (props: Props) => {
   }
   const userInitials =
     user &&
-    (user?.fullName || '')
+    (user?.name || '')
       .split(' ')
       .slice(0, 2)
       .map(x => x[0].toUpperCase())
@@ -106,7 +106,7 @@ const UserDropdown = (props: Props) => {
             <Box sx={{ flex: 1, display: 'flex', ml: 2.5, alignItems: 'flex-start', flexDirection: 'column' }}>
               <Typography sx={{ fontWeight: 500 }}>
                 Hello, <br />
-                {user?.fullName}
+                {user?.name}
               </Typography>
               {/* <Typography variant='body2'>Admin</Typography> */}
             </Box>

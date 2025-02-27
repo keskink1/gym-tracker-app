@@ -21,7 +21,6 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 import { useSettings } from 'src/@core/hooks/useSettings'
 
 import toast from 'react-hot-toast'
-import { PricialLogoSvg } from 'src/@core/layouts/components/horizontal/app-bar-content'
 import { AuthRegisterRequest } from 'src/@core/models/auth-models'
 import authService from 'src/@core/services/auth.service'
 import FooterIllustrationsV2 from 'src/views/pages/auth/FooterIllustrationsV2'
@@ -149,14 +148,12 @@ const Register = () => {
                 mb: 24,
                 filter: 'drop-shadow(1px 2px 1px #000)'
               }}
-            >
-              <PricialLogoSvg height={48} />
-            </Box>
+            ></Box>
             <Box sx={{ my: 6 }}>
               <Typography variant='h3' sx={{ mb: 1.5 }}>
                 Adventure starts here 🚀
               </Typography>
-              <Typography sx={{ color: 'text.secondary' }}>Make your subscription management easy and fun!</Typography>
+              <Typography sx={{ color: 'text.secondary' }}>Make your workout management easy and fun!</Typography>
             </Box>
             {registerCompleted ? (
               <>
